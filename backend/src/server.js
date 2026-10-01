@@ -8,14 +8,13 @@ const PORT = process.env.PORT || 5000;
 const startServer = async () => {
     try {
         await connectDB();
-
-        app.listen(PORT, () => {
-            console.log(`🚜 HumanLink server running on port ${PORT}`);
-        });
     } catch (error) {
-        console.error("❌ Failed to start server:", error.message);
-        process.exit(1);
+        console.warn("⚠️ Server starting without active DB connection:", error.message);
     }
+
+    app.listen(PORT, () => {
+        console.log(`🚜 HumanLink server running on port ${PORT}`);
+    });
 };
 
 startServer();

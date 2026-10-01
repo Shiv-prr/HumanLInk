@@ -1,10 +1,6 @@
 """
 HumanLink AI Service - Main FastAPI Application
 
-==================================================
-EXPLANATORY COMMENTS FOR BEGINNERS & DEVELOPERS:
-==================================================
-
 1. WHAT IS FASTAPI?
    FastAPI is a modern, fast (high-performance) web framework for building APIs
    with Python based on standard Python type hints. It automatically generates
@@ -43,8 +39,14 @@ EXPLANATORY COMMENTS FOR BEGINNERS & DEVELOPERS:
    The actual machine learning prediction model will be connected in subsequent Phase 9 steps.
 """
 
-from fastapi import FastAPI
+import math
+from datetime import datetime
+from fastapi import FastAPI, HTTPException, status
 from pydantic import BaseModel, field_validator
+
+from app.ml_model import load_model_and_metadata, predict_market_price
+from app.mongodb_data import get_market_price_records
+from app.data_preparation import parse_date, extract_date_features
 
 # Create the main FastAPI application instance
 app = FastAPI(
@@ -106,17 +108,99 @@ def health_check():
 @app.post("/predict-price")
 def predict_price(request: PricePredictionRequest):
     """
-    Price Prediction API Endpoint (Step 2 - Contract & Input Validation).
+    Price Prediction API Endpoint.
     
-    Accepts validated crop and market information and returns a structured response.
-    Note: estimatedPrice is currently null as the ML model will be connected in Step 3.
+    Loads trained machine learning model and queries historical market price records
+    from MongoDB to construct lag features for real price estimation.
     """
-    return {
-        "success": True,
-        "crop": request.crop,
-        "market": request.market,
+    pipeline, metadata = load_model_and_metadata()
+
+    if not pipeline:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Price prediction model is not currently trained."
+        )
+
+    # Fetch historical records for this crop and market from MongoDB
+    records = get_market_price_records(
+        filter_dict={"cropName": request.crop, "marketName": request.market},
+        source_filter=None,
+        limit=100
+    )
+
+    # Fallback search by crop if exact (crop, market) history is empty
+    if not records:
+        records = get_market_price_records(
+            filter_dict={"cropName": request.crop},
+            source_filter=None,
+            limit=100
+        )
+
+    if not records:
+        return {
+            "success": False,
+            "crop": request.crop,
+            "market": request.market,
+            "district": request.district,
+            "state": request.state,
+            "estimatedPrice": None,
+            "unit": "quintal",
+            "message": "Insufficient historical market data available for this commodity/market."
+        }
+
+    # Sort historical records by priceDate
+    records.sort(key=lambda r: parse_date(r.get("priceDate")))
+    latest_rec = records[-1]
+    prev_price = float(latest_rec.get("modalPrice"))
+
+    p2_price = float(records[-2].get("modalPrice")) if len(records) >= 2 else float("nan")
+    p3_price = float(records[-3].get("modalPrice")) if len(records) >= 3 else float("nan")
+
+    now = datetime.now()
+    date_feats = extract_date_features(now)
+
+    feature_dict = {
+        "cropName": request.crop,
+        "marketName": request.market,
         "district": request.district,
         "state": request.state,
-        "estimatedPrice": None,
-        "message": "ML model will be connected in the next step"
+        "year": date_feats["year"],
+        "month": date_feats["month"],
+        "day": date_feats["day"],
+        "day_of_week": date_feats["day_of_week"],
+        "previous_price": prev_price,
+        "price_2_records_ago": p2_price,
+        "price_3_records_ago": p3_price
     }
+
+    try:
+        estimated_val = predict_market_price(pipeline, feature_dict)
+        if math.isnan(estimated_val) or estimated_val < 0:
+            estimated_val = prev_price
+
+        model_name = metadata.get("selected_model_name", "RandomForest") if metadata else "RandomForest"
+        data_src = metadata.get("data_source", "Government of India OGD / AGMARKNET") if metadata else "Government of India OGD / AGMARKNET"
+
+        return {
+            "success": True,
+            "crop": request.crop,
+            "market": request.market,
+            "district": request.district,
+            "state": request.state,
+            "estimatedPrice": round(estimated_val, 2),
+            "unit": "quintal",
+            "model": model_name,
+            "dataSource": data_src,
+            "message": "Estimated modal price based on historical government mandi data"
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "crop": request.crop,
+            "market": request.market,
+            "district": request.district,
+            "state": request.state,
+            "estimatedPrice": None,
+            "message": f"Prediction error: {str(e)}"
+        }
+

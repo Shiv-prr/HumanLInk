@@ -65,10 +65,17 @@ const marketPriceSchema = new mongoose.Schema(
             required: [true, "Price date is required"],
             default: Date.now
         },
+        variety: {
+            type: String,
+            trim: true
+        },
+        lastSyncedAt: {
+            type: Date
+        },
         source: {
             type: String,
             trim: true,
-            default: "Sample Market Data (Agmarknet simulation)"
+            default: "Development Sample Data"
         }
     },
     {
@@ -76,4 +83,11 @@ const marketPriceSchema = new mongoose.Schema(
     }
 );
 
+// Compound index to ensure uniqueness of market price records from government/sample ingestion
+marketPriceSchema.index(
+    { cropName: 1, marketName: 1, state: 1, district: 1, priceDate: 1, variety: 1 },
+    { unique: true, sparse: true }
+);
+
 module.exports = mongoose.model("MarketPrice", marketPriceSchema);
+

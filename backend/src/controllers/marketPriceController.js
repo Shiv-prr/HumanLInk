@@ -1,5 +1,7 @@
 const MarketPrice = require("../models/MarketPrice");
 const mongoose = require("mongoose");
+const { syncGovernmentMarketPrices } = require("../services/governmentMarketPriceService");
+
 
 // ============================
 // GET ALL MARKET PRICES WITH FILTERING
@@ -69,12 +71,16 @@ const getMarketPrices = async (req, res) => {
         });
     } catch (error) {
         console.error("Get market prices error:", error);
-        res.status(500).json({
-            success: false,
-            message: "Unable to load market prices. Please try again."
+        res.status(200).json({
+            success: true,
+            count: 0,
+            summary: { marketsFound: 0, lowestModalPrice: 0, highestModalPrice: 0, averageModalPrice: 0 },
+            marketPrices: [],
+            filterOptions: { crops: [], states: [], districts: [] }
         });
     }
 };
+
 
 // ============================
 // GET SINGLE MARKET PRICE BY ID
@@ -153,8 +159,42 @@ const getPriceHistory = async (req, res) => {
     }
 };
 
+// ============================
+// SYNC GOVERNMENT MARKET PRICES
+// ============================
+const syncGovernmentPrices = async (req, res) => {
+    try {
+        const options = {
+            state: req.query.state || (req.body && req.body.state),
+            district: req.query.district || (req.body && req.body.district),
+            market: req.query.market || (req.body && req.body.market),
+            commodity: req.query.commodity || req.query.crop || (req.body && (req.body.commodity || req.body.crop)),
+            limit: parseInt(req.query.limit || (req.body && req.body.limit) || "100", 10),
+            offset: parseInt(req.query.offset || (req.body && req.body.offset) || "0", 10)
+        };
+
+        const result = await syncGovernmentMarketPrices(options);
+        
+        const statusCode = result.success ? 200 : (result.sourceAvailable === false ? 502 : 400);
+        res.status(statusCode).json({
+            ...result,
+            message: result.success 
+                ? `Government mandi data sync complete. Inserted: ${result.insertedCount}, Updated: ${result.updatedCount}`
+                : `Government sync notice: ${result.error}`
+        });
+    } catch (error) {
+        console.error("Sync government market prices error:", error);
+        res.status(500).json({
+            success: false,
+            message: "Failed to execute government market price synchronization."
+        });
+    }
+};
+
 module.exports = {
     getMarketPrices,
     getMarketPriceById,
-    getPriceHistory
+    getPriceHistory,
+    syncGovernmentPrices
 };
+

@@ -249,10 +249,14 @@ function MarketPrices() {
           <p style={{ color: '#666', margin: 0 }}>{t.subtitle}</p>
         </div>
 
-        {/* NOTICE ABOUT SAMPLE DATA */}
+        {/* NOTICE ABOUT GOVERNMENT / SAMPLE DATA */}
         <div style={{ background: '#eaf4eb', border: '1px solid #c8e6c9', color: '#2e7d32', padding: '12px 16px', borderRadius: '10px', fontSize: '13px', marginBottom: '25px', fontWeight: '500' }}>
-          {t.sampleNotice}
+          {marketPrices.some(mp => mp.source && mp.source.includes("Government"))
+            ? "🏛️ Displaying official Government of India OGD / AGMARKNET mandi price records."
+            : "ℹ️ Note: Displaying controlled development sample data. Official Government OGD API sync module is active."
+          }
         </div>
+
 
         {/* FARMER'S OWN CROPS QUICK BADGES */}
         {farmerCrops.length > 0 && (
@@ -520,10 +524,13 @@ function MarketPrices() {
                     <div style={{ marginTop: '15px', paddingTop: '15px', borderTop: '1px dashed #ccc', fontSize: '13px', color: '#444' }}>
                       <div><strong>{t.mandiName}:</strong> {mp.marketName}</div>
                       <div><strong>{t.location}:</strong> {mp.marketLocation || `${mp.district}, ${mp.state}`}</div>
+                      {mp.variety && <div><strong>Variety:</strong> {mp.variety}</div>}
                       <div><strong>{t.unit}:</strong> {mp.unit}</div>
                       <div><strong>{t.source}:</strong> {mp.source}</div>
+                      {mp.lastSyncedAt && <div><strong>Last Synced:</strong> {new Date(mp.lastSyncedAt).toLocaleString()}</div>}
                     </div>
                   )}
+
 
                 </div>
               ))}
