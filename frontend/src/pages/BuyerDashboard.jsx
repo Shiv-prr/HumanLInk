@@ -8,6 +8,8 @@ function BuyerDashboard() {
   const [availableCropsCount, setAvailableCropsCount] = useState(0);
   const [offersSentCount, setOffersSentCount] = useState(0);
   const [acceptedOffersCount, setAcceptedOffersCount] = useState(0);
+  const [logisticsCount, setLogisticsCount] = useState(0);
+  const [storageCount, setStorageCount] = useState(0);
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -31,6 +33,24 @@ function BuyerDashboard() {
             setOffersSentCount(offersData.offers.length);
             const accepted = offersData.offers.filter(o => o.status === "accepted").length;
             setAcceptedOffersCount(accepted);
+          }
+
+          // Fetch logistics stats
+          const logRes = await fetch("http://localhost:5000/api/logistics/my", {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          const logData = await logRes.json();
+          if (logRes.ok && logData.success && Array.isArray(logData.logistics)) {
+            setLogisticsCount(logData.logistics.length);
+          }
+
+          // Fetch storage stats
+          const storeRes = await fetch("http://localhost:5000/api/storage/my", {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          const storeData = await storeRes.json();
+          if (storeRes.ok && storeData.success && Array.isArray(storeData.storage)) {
+            setStorageCount(storeData.storage.length);
           }
         }
       } catch (e) {}
@@ -65,9 +85,17 @@ function BuyerDashboard() {
             📨 <span>My Offers</span>
           </Link>
 
-          <button className="dashboard-nav">
+          <Link to="/buyer/deals" className="dashboard-nav" style={{ textDecoration: 'none', color: '#c2c7d0' }}>
             🤝 <span>My Deals</span>
-          </button>
+          </Link>
+
+          <Link to="/buyer/logistics" className="dashboard-nav" style={{ textDecoration: 'none', color: '#c2c7d0' }}>
+            🚛 <span>My Logistics</span>
+          </Link>
+
+          <Link to="/buyer/storage" className="dashboard-nav" style={{ textDecoration: 'none', color: '#c2c7d0' }}>
+            🏢 <span>My Storage</span>
+          </Link>
 
           <Link to="/buyer/profile" className="dashboard-nav" style={{ textDecoration: 'none', color: '#c2c7d0' }}>
             👤 <span>My Profile</span>
@@ -123,11 +151,11 @@ function BuyerDashboard() {
             <strong style={{ color: '#495057' }}>→</strong>
           </button>
 
-          <button className="big-action" style={{ background: '#f8f9fa', border: '1px solid #dee2e6' }}>
+          <button className="big-action" onClick={() => navigate("/buyer/deals")} style={{ background: '#f8f9fa', border: '1px solid #dee2e6' }}>
             <div className="big-action-icon">🤝</div>
             <div>
               <h3 style={{ color: '#212529' }}>My Deals</h3>
-              <p>View your completed deals.</p>
+              <p>View your completed & active deals.</p>
             </div>
             <strong style={{ color: '#495057' }}>→</strong>
           </button>
@@ -153,17 +181,28 @@ function BuyerDashboard() {
               <p>Offers Sent</p>
             </div>
 
-            <div className="activity-card" style={{ background: '#f1f3f5', cursor: 'pointer' }} onClick={() => navigate("/buyer/offers")}>
+            <div className="activity-card" style={{ background: '#f1f3f5', cursor: 'pointer' }} onClick={() => navigate("/buyer/deals")}>
               <span>🤝</span>
               <strong>{acceptedOffersCount}</strong>
               <p>Offers Accepted</p>
+            </div>
+
+            <div className="activity-card" style={{ background: '#f1f3f5', cursor: 'pointer' }} onClick={() => navigate("/buyer/logistics")}>
+              <span>🚛</span>
+              <strong>{logisticsCount}</strong>
+              <p>Active Logistics</p>
+            </div>
+
+            <div className="activity-card" style={{ background: '#f1f3f5', cursor: 'pointer' }} onClick={() => navigate("/buyer/storage")}>
+              <span>🏢</span>
+              <strong>{storageCount}</strong>
+              <p>Active Storage</p>
             </div>
           </div>
         </section>
       </main>
     </div>
   );
-
 }
 
 export default BuyerDashboard;

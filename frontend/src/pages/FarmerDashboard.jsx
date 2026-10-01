@@ -7,7 +7,9 @@ const content = {
     myCrops: "My Crops",
     marketPrices: "Market Prices",
     buyerOffers: "Buyer Offers",
-    mySales: "My Sales",
+    mySales: "My Transactions",
+    logistics: "My Logistics",
+    storage: "My Storage",
     myProfile: "My Profile",
     help: "Help",
     language: "Language",
@@ -22,18 +24,22 @@ const content = {
     seeOffersDesc: "View offers for your crops.",
     statsTitle: "QUICK VIEW",
     statsSubtitle: "Your Activity",
-    completedSales: "Completed Sales",
+    completedSales: "Transactions",
+    activeLogistics: "Active Logistics",
+    activeStorage: "Stored Batches",
     helpTitle: "Need Help?",
     helpDesc: "Don't worry. HumanLink will guide you step-by-step.",
     helpBtn: "Get Help",
     langSwitch: "हिंदी"
   },
   hi: {
-    home: "मेरी होम",
+    home: "होम",
     myCrops: "मेरी फसल",
     marketPrices: "बाजार भाव",
     buyerOffers: "खरीदारों के ऑफर",
-    mySales: "मेरी बिक्री",
+    mySales: "मेरे सौदे",
+    logistics: "मेरा परिवहन",
+    storage: "मेरा भंडारण",
     myProfile: "मेरी प्रोफाइल",
     help: "मदद",
     language: "भाषा",
@@ -48,7 +54,9 @@ const content = {
     seeOffersDesc: "आपकी फसल के लिए आए ऑफर देखें।",
     statsTitle: "QUICK VIEW",
     statsSubtitle: "आपकी जानकारी",
-    completedSales: "मेरी बिक्री",
+    completedSales: "कुल सौदे",
+    activeLogistics: "परिवहन रिकॉर्ड",
+    activeStorage: "भंडारण रिकॉर्ड",
     helpTitle: "कोई दिक्कत है?",
     helpDesc: "चिंता मत कीजिए। HumanLink आपको step-by-step मदद करेगा।",
     helpBtn: "मदद लें",
@@ -58,12 +66,22 @@ const content = {
 
 function FarmerDashboard() {
   const navigate = useNavigate();
-
-  const user = JSON.parse(localStorage.getItem("user") || "{}");
+  const [user, setUser] = useState({});
   const [lang, setLang] = useState(localStorage.getItem("farmerLang") || "en");
   const [cropCount, setCropCount] = useState(0);
   const [offerCount, setOfferCount] = useState(0);
   const [txCount, setTxCount] = useState(0);
+  const [logisticsCount, setLogisticsCount] = useState(0);
+  const [storageCount, setStorageCount] = useState(0);
+
+  useEffect(() => {
+    const savedUser = localStorage.getItem("user");
+    if (savedUser) {
+      try {
+        setUser(JSON.parse(savedUser));
+      } catch (e) {}
+    }
+  }, []);
 
   useEffect(() => {
     localStorage.setItem("farmerLang", lang);
@@ -97,6 +115,24 @@ function FarmerDashboard() {
           const txData = await txRes.json();
           if (txRes.ok && txData.success && Array.isArray(txData.transactions)) {
             setTxCount(txData.transactions.length);
+          }
+
+          // Fetch logistics stats
+          const logRes = await fetch("http://localhost:5000/api/logistics/my", {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          const logData = await logRes.json();
+          if (logRes.ok && logData.success && Array.isArray(logData.logistics)) {
+            setLogisticsCount(logData.logistics.length);
+          }
+
+          // Fetch storage stats
+          const storeRes = await fetch("http://localhost:5000/api/storage/my", {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          const storeData = await storeRes.json();
+          if (storeRes.ok && storeData.success && Array.isArray(storeData.storage)) {
+            setStorageCount(storeData.storage.length);
           }
         }
       } catch (e) {}
@@ -142,7 +178,15 @@ function FarmerDashboard() {
           </Link>
 
           <Link to="/farmer/transactions" className="dashboard-nav" style={{ textDecoration: 'none' }}>
-            📦 <span>{lang === "en" ? "My Transactions" : "मेरे सौदे"}</span>
+            📦 <span>{t.mySales}</span>
+          </Link>
+
+          <Link to="/farmer/logistics" className="dashboard-nav" style={{ textDecoration: 'none' }}>
+            🚛 <span>{t.logistics}</span>
+          </Link>
+
+          <Link to="/farmer/storage" className="dashboard-nav" style={{ textDecoration: 'none' }}>
+            🏢 <span>{t.storage}</span>
           </Link>
 
           <Link to="/farmer/profile" className="dashboard-nav" style={{ textDecoration: 'none' }}>
@@ -221,34 +265,36 @@ function FarmerDashboard() {
           </div>
 
           <div className="activity-grid">
-            <div className="activity-card" style={{ cursor: 'pointer' }} onClick={() => navigate("/farmer/crops")}>
-              <span>🌾</span>
+            <div className="activity-card" onClick={() => navigate("/farmer/crops")} style={{ cursor: 'pointer' }}>
+              <span>Listed Crops</span>
               <strong>{cropCount}</strong>
-              <p>{t.myCrops}</p>
+              <small>View & Manage</small>
             </div>
 
-            <div className="activity-card" style={{ cursor: 'pointer' }} onClick={() => navigate("/farmer/offers")}>
-              <span>🤝</span>
+            <div className="activity-card" onClick={() => navigate("/farmer/offers")} style={{ cursor: 'pointer' }}>
+              <span>Pending Buyer Offers</span>
               <strong>{offerCount}</strong>
-              <p>{t.buyerOffers} (Pending)</p>
+              <small>Review & Accept</small>
             </div>
 
-            <div className="activity-card" style={{ cursor: 'pointer' }} onClick={() => navigate("/farmer/transactions")}>
-              <span>📦</span>
+            <div className="activity-card" onClick={() => navigate("/farmer/transactions")} style={{ cursor: 'pointer' }}>
+              <span>{t.completedSales}</span>
               <strong>{txCount}</strong>
-              <p>{lang === "en" ? "My Transactions" : "मेरे सौदे"}</p>
+              <small>Net Realisation</small>
+            </div>
+
+            <div className="activity-card" onClick={() => navigate("/farmer/logistics")} style={{ cursor: 'pointer' }}>
+              <span>{t.activeLogistics}</span>
+              <strong>{logisticsCount}</strong>
+              <small>Transport Status</small>
+            </div>
+
+            <div className="activity-card" onClick={() => navigate("/farmer/storage")} style={{ cursor: 'pointer' }}>
+              <span>{t.activeStorage}</span>
+              <strong>{storageCount}</strong>
+              <small>Warehouse Storage</small>
             </div>
           </div>
-        </section>
-
-        {/* HELP */}
-        <section className="farmer-help">
-          <div className="help-symbol">💬</div>
-          <div>
-            <h3>{t.helpTitle}</h3>
-            <p>{t.helpDesc}</p>
-          </div>
-          <button>{t.helpBtn}</button>
         </section>
       </main>
     </div>

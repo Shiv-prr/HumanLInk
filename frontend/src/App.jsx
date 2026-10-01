@@ -20,7 +20,11 @@ import BuyerOffers from "./pages/BuyerOffers";
 import FarmerOffers from "./pages/FarmerOffers";
 import FarmerTransactions from "./pages/FarmerTransactions";
 import FarmerTransactionDetails from "./pages/FarmerTransactionDetails";
+import FarmerLogistics from "./pages/FarmerLogistics";
+import FarmerStorage from "./pages/FarmerStorage";
 import BuyerDeals from "./pages/BuyerDeals";
+import BuyerLogistics from "./pages/BuyerLogistics";
+import BuyerStorage from "./pages/BuyerStorage";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 function App() {
@@ -93,6 +97,24 @@ function App() {
           element={
             <ProtectedRoute role="farmer">
               <FarmerTransactionDetails />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/farmer/logistics"
+          element={
+            <ProtectedRoute role="farmer">
+              <FarmerLogistics />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/farmer/storage"
+          element={
+            <ProtectedRoute role="farmer">
+              <FarmerStorage />
             </ProtectedRoute>
           }
         />
@@ -196,11 +218,27 @@ function App() {
           }
         />
 
+        <Route
+          path="/buyer/logistics"
+          element={
+            <ProtectedRoute role="buyer">
+              <BuyerLogistics />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/buyer/storage"
+          element={
+            <ProtectedRoute role="buyer">
+              <BuyerStorage />
+            </ProtectedRoute>
+          }
+        />
+
       </Routes>
     </BrowserRouter>
   );
 }
-
-
 
 export default App;

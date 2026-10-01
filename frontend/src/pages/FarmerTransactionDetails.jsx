@@ -34,7 +34,17 @@ const content = {
     initiated: "🟡 Initiated",
     confirmed: "🔵 Confirmed",
     completed: "🟢 Completed",
-    cancelled: "⚪ Cancelled"
+    cancelled: "⚪ Cancelled",
+    logisticsSection: "🚚 LOGISTICS & TRANSPORT",
+    storageSection: "📦 CROP STORAGE & WAREHOUSE",
+    createLogisticsBtn: "➕ Request Logistics",
+    addStorageBtn: "➕ Add Storage Record",
+    pickupLocation: "Pickup Location",
+    deliveryLocation: "Delivery Location",
+    transportType: "Vehicle Type",
+    storageName: "Storage Name",
+    storageLocation: "Storage Location",
+    quantity: "Quantity"
   },
   hi: {
     title: "सौदा / लेनदेन विवरण",
@@ -68,7 +78,17 @@ const content = {
     initiated: "🟡 शुरू किया गया",
     confirmed: "🔵 की पुष्टि की गई",
     completed: "🟢 पूरा हुआ",
-    cancelled: "⚪ रद्द किया गया"
+    cancelled: "⚪ रद्द किया गया",
+    logisticsSection: "🚚 लॉजिस्टिक्स और परिवहन",
+    storageSection: "📦 फसल भंडारण और गोदाम",
+    createLogisticsBtn: "➕ लॉजिस्टिक्स बुक करें",
+    addStorageBtn: "➕ भंडारण जोड़ें",
+    pickupLocation: "पिकअप स्थान",
+    deliveryLocation: "डिलीवरी स्थान",
+    transportType: "वाहन प्रकार",
+    storageName: "गोदाम का नाम",
+    storageLocation: "गोदाम का स्थान",
+    quantity: "मात्रा"
   }
 };
 
@@ -79,8 +99,33 @@ function FarmerTransactionDetails() {
   const t = content[lang];
 
   const [transaction, setTransaction] = useState(null);
+  const [logistics, setLogistics] = useState(null);
+  const [storageRecords, setStorageRecords] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  // Modals for creating logistics / storage
+  const [showLogisticsModal, setShowLogisticsModal] = useState(false);
+  const [showStorageModal, setShowStorageModal] = useState(false);
+
+  const [logisticsForm, setLogisticsForm] = useState({
+    pickupLocation: "",
+    deliveryLocation: "",
+    transportType: "truck",
+    transportCost: 0,
+    vehicleNumber: "",
+    driverName: "",
+    driverPhone: ""
+  });
+
+  const [storageForm, setStorageForm] = useState({
+    storageName: "",
+    storageLocation: "",
+    storageType: "warehouse",
+    quantity: 0,
+    entryDate: new Date().toISOString().split("T")[0],
+    storageCost: 0
+  });
 
   // Costs form state
   const [costs, setCosts] = useState({
@@ -95,6 +140,7 @@ function FarmerTransactionDetails() {
 
   useEffect(() => {
     fetchTransactionDetails();
+    fetchLogisticsAndStorage();
   }, [id]);
 
   const fetchTransactionDetails = async () => {
@@ -119,10 +165,50 @@ function FarmerTransactionDetails() {
         storageCost: tx.storageCost || 0,
         otherCosts: tx.otherCosts || 0
       });
+
+      setLogisticsForm(prev => ({
+        ...prev,
+        pickupLocation: `${tx.crop?.district || ''}, ${tx.crop?.state || ''}`,
+        deliveryLocation: tx.buyer?.location || 'Buyer Warehouse'
+      }));
+
+      setStorageForm(prev => ({
+        ...prev,
+        storageLocation: `${tx.crop?.district || ''}, ${tx.crop?.state || ''}`,
+        quantity: tx.quantity
+      }));
     } catch (err) {
       setError(err.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchLogisticsAndStorage = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      
+      // Fetch logistics
+      const resLog = await fetch("http://localhost:5000/api/logistics/my", {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const dataLog = await resLog.json();
+      if (dataLog.success) {
+        const matchingLog = (dataLog.logistics || []).find(l => (l.transaction._id || l.transaction) === id);
+        setLogistics(matchingLog || null);
+      }
+
+      // Fetch storage
+      const resStore = await fetch("http://localhost:5000/api/storage/my", {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const dataStore = await resStore.json();
+      if (dataStore.success) {
+        const matchingStore = (dataStore.storage || []).filter(s => (s.transaction._id || s.transaction) === id);
+        setStorageRecords(matchingStore || []);
+      }
+    } catch (e) {
+      console.error("Error fetching logistics/storage", e);
     }
   };
 
@@ -138,8 +224,6 @@ function FarmerTransactionDetails() {
 
     try {
       const token = localStorage.getItem("token");
-      if (!token) return navigate("/login");
-
       const res = await fetch(`http://localhost:5000/api/transactions/${id}/costs`, {
         method: "PATCH",
         headers: {
@@ -168,14 +252,62 @@ function FarmerTransactionDetails() {
     }
   };
 
+  const handleCreateLogistics = async (e) => {
+    e.preventDefault();
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(`http://localhost:5000/api/logistics/from-transaction/${id}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify(logisticsForm)
+      });
+      const data = await res.json();
+      if (data.success) {
+        setShowLogisticsModal(false);
+        fetchTransactionDetails();
+        fetchLogisticsAndStorage();
+      } else {
+        alert(data.message || "Failed to create logistics record");
+      }
+    } catch (err) {
+      alert("Error creating logistics record");
+    }
+  };
+
+  const handleCreateStorage = async (e) => {
+    e.preventDefault();
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(`http://localhost:5000/api/storage/from-transaction/${id}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify(storageForm)
+      });
+      const data = await res.json();
+      if (data.success) {
+        setShowStorageModal(false);
+        fetchTransactionDetails();
+        fetchLogisticsAndStorage();
+      } else {
+        alert(data.message || "Failed to create storage record");
+      }
+    } catch (err) {
+      alert("Error creating storage record");
+    }
+  };
+
   const handleStatusUpdate = async (newStatus, promptText) => {
     if (!window.confirm(promptText)) return;
 
     setActionLoading(true);
     try {
       const token = localStorage.getItem("token");
-      if (!token) return navigate("/login");
-
       const res = await fetch(`http://localhost:5000/api/transactions/${id}/status`, {
         method: "PATCH",
         headers: {
@@ -282,7 +414,7 @@ function FarmerTransactionDetails() {
               <div style={{ background: 'white', padding: '15px', borderRadius: '10px', border: '1px solid #e0e8de' }}>
                 <span style={{ color: '#666', fontSize: '13px' }}>{t.grossAmount}</span>
                 <strong style={{ display: 'block', fontSize: '22px', color: '#333', marginTop: '4px' }}>
-                  ₹{transaction.grossAmount.toLocaleString()}
+                  ₹{transaction.grossAmount.toLocaleString('en-IN')}
                 </strong>
                 <small style={{ color: '#888' }}>({transaction.quantity} × ₹{transaction.agreedPrice})</small>
               </div>
@@ -290,7 +422,7 @@ function FarmerTransactionDetails() {
               <div style={{ background: 'white', padding: '15px', borderRadius: '10px', border: '1px solid #ffebee' }}>
                 <span style={{ color: '#666', fontSize: '13px' }}>{t.totalCosts}</span>
                 <strong style={{ display: 'block', fontSize: '22px', color: '#d32f2f', marginTop: '4px' }}>
-                  - ₹{transaction.totalCosts.toLocaleString()}
+                  - ₹{transaction.totalCosts.toLocaleString('en-IN')}
                 </strong>
                 <small style={{ color: '#888' }}>(Transport + Loading + Storage + Other)</small>
               </div>
@@ -302,12 +434,78 @@ function FarmerTransactionDetails() {
                 {t.netRealisation}
               </div>
               <div style={{ fontSize: '36px', fontWeight: '900', color: '#1b5e20', margin: '5px 0' }}>
-                ₹{transaction.netRealisation.toLocaleString()}
+                ₹{transaction.netRealisation.toLocaleString('en-IN')}
               </div>
               <small style={{ color: '#33691e', fontWeight: '500' }}>
                 (Actual Net Income Received by Farmer after Deductions)
               </small>
             </div>
+          </div>
+
+          {/* PHASE 8: LOGISTICS SECTION */}
+          <div style={{ background: '#fafafa', border: '1px solid #e0e0e0', borderRadius: '14px', padding: '25px', marginBottom: '30px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+              <h3 style={{ margin: 0, color: '#1b5e20', fontSize: '18px' }}>{t.logisticsSection}</h3>
+              {!logistics && (
+                <button
+                  onClick={() => setShowLogisticsModal(true)}
+                  style={{ padding: '8px 16px', background: '#2e7d32', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}
+                >
+                  {t.createLogisticsBtn}
+                </button>
+              )}
+            </div>
+
+            {logistics ? (
+              <div style={{ background: '#fff', padding: '15px', borderRadius: '8px', border: '1px solid #ddd' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                  <span style={{ fontWeight: 'bold', color: '#2e7d32' }}>Status: {logistics.status.toUpperCase()}</span>
+                  <span style={{ color: '#d32f2f', fontWeight: 'bold' }}>Transport Cost: ₹{logistics.transportCost.toLocaleString('en-IN')}</span>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '10px', fontSize: '0.9rem', color: '#444' }}>
+                  <div>📍 <strong>Pickup:</strong> {logistics.pickupLocation}</div>
+                  <div>🏁 <strong>Delivery:</strong> {logistics.deliveryLocation}</div>
+                  <div>🚛 <strong>Type:</strong> {logistics.transportType}</div>
+                  {logistics.vehicleNumber && <div>🚘 <strong>Vehicle:</strong> {logistics.vehicleNumber}</div>}
+                  {logistics.driverName && <div>👨‍✈️ <strong>Driver:</strong> {logistics.driverName}</div>}
+                </div>
+              </div>
+            ) : (
+              <p style={{ margin: 0, color: '#666', fontSize: '0.9rem' }}>No logistics schedule requested yet for this transaction.</p>
+            )}
+          </div>
+
+          {/* PHASE 8: STORAGE SECTION */}
+          <div style={{ background: '#fafafa', border: '1px solid #e0e0e0', borderRadius: '14px', padding: '25px', marginBottom: '30px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+              <h3 style={{ margin: 0, color: '#1b5e20', fontSize: '18px' }}>{t.storageSection}</h3>
+              <button
+                onClick={() => setShowStorageModal(true)}
+                style={{ padding: '8px 16px', background: '#2e7d32', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}
+              >
+                {t.addStorageBtn}
+              </button>
+            </div>
+
+            {storageRecords.length > 0 ? (
+              <div style={{ display: 'grid', gap: '10px' }}>
+                {storageRecords.map(s => (
+                  <div key={s._id} style={{ background: '#fff', padding: '15px', borderRadius: '8px', border: '1px solid #ddd' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '5px' }}>
+                      <strong style={{ color: '#1b5e20' }}>🏢 {s.storageName} ({s.storageType})</strong>
+                      <span style={{ fontWeight: 'bold', color: '#2e7d32' }}>{s.status.toUpperCase()}</span>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px', fontSize: '0.9rem', color: '#444' }}>
+                      <div>📍 <strong>Location:</strong> {s.storageLocation}</div>
+                      <div>⚖️ <strong>Quantity:</strong> {s.quantity} {transaction.crop?.unit || "kg"}</div>
+                      <div>💰 <strong>Cost:</strong> ₹{s.storageCost.toLocaleString('en-IN')}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p style={{ margin: 0, color: '#666', fontSize: '0.9rem' }}>No storage facility linked yet for this transaction batch.</p>
+            )}
           </div>
 
           {/* EDITABLE COSTS FORM */}
@@ -434,6 +632,150 @@ function FarmerTransactionDetails() {
         </div>
 
       </main>
+
+      {/* CREATE LOGISTICS MODAL */}
+      {showLogisticsModal && (
+        <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.5)", display: "flex", justifyContent: "center", alignItems: "center", zIndex: 1000 }}>
+          <div style={{ background: "#fff", padding: "25px", borderRadius: "10px", maxWidth: "500px", width: "90%" }}>
+            <h3 style={{ marginTop: 0, color: "#1b5e20" }}>🚚 Create Logistics Record</h3>
+            <form onSubmit={handleCreateLogistics}>
+              <div style={{ marginBottom: "12px" }}>
+                <label style={{ display: "block", fontSize: "13px", fontWeight: "bold" }}>Pickup Location:</label>
+                <input
+                  type="text"
+                  required
+                  value={logisticsForm.pickupLocation}
+                  onChange={e => setLogisticsForm({ ...logisticsForm, pickupLocation: e.target.value })}
+                  style={{ width: "100%", padding: "8px", borderRadius: "6px", border: "1px solid #ccc" }}
+                />
+              </div>
+
+              <div style={{ marginBottom: "12px" }}>
+                <label style={{ display: "block", fontSize: "13px", fontWeight: "bold" }}>Delivery Location:</label>
+                <input
+                  type="text"
+                  required
+                  value={logisticsForm.deliveryLocation}
+                  onChange={e => setLogisticsForm({ ...logisticsForm, deliveryLocation: e.target.value })}
+                  style={{ width: "100%", padding: "8px", borderRadius: "6px", border: "1px solid #ccc" }}
+                />
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: "12px" }}>
+                <div>
+                  <label style={{ display: "block", fontSize: "13px", fontWeight: "bold" }}>Transport Type:</label>
+                  <select
+                    value={logisticsForm.transportType}
+                    onChange={e => setLogisticsForm({ ...logisticsForm, transportType: e.target.value })}
+                    style={{ width: "100%", padding: "8px", borderRadius: "6px", border: "1px solid #ccc" }}
+                  >
+                    <option value="truck">Truck</option>
+                    <option value="tractor">Tractor</option>
+                    <option value="tempo">Tempo</option>
+                    <option value="pickup">Pickup</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ display: "block", fontSize: "13px", fontWeight: "bold" }}>Transport Cost (₹):</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={logisticsForm.transportCost}
+                    onChange={e => setLogisticsForm({ ...logisticsForm, transportCost: e.target.value })}
+                    style={{ width: "100%", padding: "8px", borderRadius: "6px", border: "1px solid #ccc" }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end", marginTop: "20px" }}>
+                <button type="button" onClick={() => setShowLogisticsModal(false)} style={{ padding: "8px 16px", background: "#eee", border: "none", borderRadius: "6px" }}>Cancel</button>
+                <button type="submit" style={{ padding: "8px 16px", background: "#2e7d32", color: "#fff", border: "none", borderRadius: "6px", fontWeight: "bold" }}>Save Logistics</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* CREATE STORAGE MODAL */}
+      {showStorageModal && (
+        <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.5)", display: "flex", justifyContent: "center", alignItems: "center", zIndex: 1000 }}>
+          <div style={{ background: "#fff", padding: "25px", borderRadius: "10px", maxWidth: "500px", width: "90%" }}>
+            <h3 style={{ marginTop: 0, color: "#1b5e20" }}>📦 Add Storage Record</h3>
+            <form onSubmit={handleCreateStorage}>
+              <div style={{ marginBottom: "12px" }}>
+                <label style={{ display: "block", fontSize: "13px", fontWeight: "bold" }}>Storage Facility Name:</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Central Warehouse #3"
+                  value={storageForm.storageName}
+                  onChange={e => setStorageForm({ ...storageForm, storageName: e.target.value })}
+                  style={{ width: "100%", padding: "8px", borderRadius: "6px", border: "1px solid #ccc" }}
+                />
+              </div>
+
+              <div style={{ marginBottom: "12px" }}>
+                <label style={{ display: "block", fontSize: "13px", fontWeight: "bold" }}>Storage Location:</label>
+                <input
+                  type="text"
+                  required
+                  value={storageForm.storageLocation}
+                  onChange={e => setStorageForm({ ...storageForm, storageLocation: e.target.value })}
+                  style={{ width: "100%", padding: "8px", borderRadius: "6px", border: "1px solid #ccc" }}
+                />
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: "12px" }}>
+                <div>
+                  <label style={{ display: "block", fontSize: "13px", fontWeight: "bold" }}>Storage Type:</label>
+                  <select
+                    value={storageForm.storageType}
+                    onChange={e => setStorageForm({ ...storageForm, storageType: e.target.value })}
+                    style={{ width: "100%", padding: "8px", borderRadius: "6px", border: "1px solid #ccc" }}
+                  >
+                    <option value="warehouse">Warehouse</option>
+                    <option value="cold_storage">Cold Storage</option>
+                    <option value="grain_storage">Grain Silo</option>
+                    <option value="farmer_storage">Farmer Storage</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ display: "block", fontSize: "13px", fontWeight: "bold" }}>Quantity ({transaction.crop?.unit || "kg"}):</label>
+                  <input
+                    type="number"
+                    min="1"
+                    max={transaction.quantity}
+                    required
+                    value={storageForm.quantity}
+                    onChange={e => setStorageForm({ ...storageForm, quantity: e.target.value })}
+                    style={{ width: "100%", padding: "8px", borderRadius: "6px", border: "1px solid #ccc" }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ marginBottom: "12px" }}>
+                <label style={{ display: "block", fontSize: "13px", fontWeight: "bold" }}>Storage Cost (₹):</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={storageForm.storageCost}
+                  onChange={e => setStorageForm({ ...storageForm, storageCost: e.target.value })}
+                  style={{ width: "100%", padding: "8px", borderRadius: "6px", border: "1px solid #ccc" }}
+                />
+              </div>
+
+              <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end", marginTop: "20px" }}>
+                <button type="button" onClick={() => setShowStorageModal(false)} style={{ padding: "8px 16px", background: "#eee", border: "none", borderRadius: "6px" }}>Cancel</button>
+                <button type="submit" style={{ padding: "8px 16px", background: "#2e7d32", color: "#fff", border: "none", borderRadius: "6px", fontWeight: "bold" }}>Save Storage</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

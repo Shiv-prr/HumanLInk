@@ -72,6 +72,17 @@ app.use("/api/marketplace", marketplaceRoutes);
 app.use("/api/offers", offerRoutes);
 app.use("/api/transactions", transactionRoutes);
 
+// ============================
+// LOGISTICS & STORAGE ROUTES
+// ============================
+
+const logisticsRoutes = require("./routes/logisticsRoutes");
+const storageRoutes = require("./routes/storageRoutes");
+
+app.use("/api/logistics", logisticsRoutes);
+app.use("/api/storage", storageRoutes);
+
+
 
 // ============================
 // 404 HANDLER
