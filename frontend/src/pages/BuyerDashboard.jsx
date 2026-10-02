@@ -69,7 +69,8 @@ function BuyerDashboard() {
       {/* SIDEBAR */}
       <aside className="dashboard-sidebar" style={{ background: '#0e1c26' }}>
         <div className="dashboard-logo" style={{ color: '#ffffff' }}>
-          🏪 Human<span>Link</span>
+          🏪 Farmer<span>Trade</span>
+          <div style={{ fontSize: '11px', color: '#7a96a8', marginTop: '2px', fontWeight: '500' }}>by HumanLink</div>
         </div>
 
         <nav>

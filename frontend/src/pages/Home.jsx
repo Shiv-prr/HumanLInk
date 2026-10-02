@@ -14,7 +14,7 @@ function Home() {
           onClick={() => navigate("/")}
         >
           <span>🌾</span>
-          Human<span>Link</span>
+          Farmer<span>Trade</span>
         </div>
 
         <nav>
@@ -72,7 +72,7 @@ function Home() {
           </h1>
 
           <p>
-            HumanLink helps farmers check market prices,
+            Farmer Trade helps farmers check market prices,
             find buyers and sell their crops with confidence.
           </p>
 
@@ -175,7 +175,7 @@ function Home() {
 
         <div className="section-title">
 
-          <span>WHAT HUMANLINK OFFERS</span>
+          <span>WHAT FARMER TRADE OFFERS</span>
 
           <h2>
             Everything you need,
@@ -284,7 +284,7 @@ function Home() {
           </h2>
 
           <p>
-            HumanLink is designed for everyone,
+            Farmer Trade is designed for everyone,
             including first-time users.
           </p>
 
@@ -406,7 +406,7 @@ function Home() {
           </h2>
 
           <p>
-            Start using HumanLink today.
+            Start using Farmer Trade today.
           </p>
 
         </div>
@@ -425,7 +425,7 @@ function Home() {
       <footer>
 
         <div className="logo">
-          🌾 Human<span>Link</span>
+          🌾 Farmer<span>Trade</span> <small style={{ fontSize: '12px', opacity: 0.8, fontWeight: 'normal' }}>— by HumanLink</small>
         </div>
 
         <p>

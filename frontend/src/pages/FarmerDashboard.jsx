@@ -28,7 +28,7 @@ const content = {
     activeLogistics: "Active Logistics",
     activeStorage: "Stored Batches",
     helpTitle: "Need Help?",
-    helpDesc: "Don't worry. HumanLink will guide you step-by-step.",
+    helpDesc: "Don't worry. Farmer Trade will guide you step-by-step.",
     helpBtn: "Get Help",
     langSwitch: "हिंदी"
   },
@@ -58,7 +58,7 @@ const content = {
     activeLogistics: "परिवहन रिकॉर्ड",
     activeStorage: "भंडारण रिकॉर्ड",
     helpTitle: "कोई दिक्कत है?",
-    helpDesc: "चिंता मत कीजिए। HumanLink आपको step-by-step मदद करेगा।",
+    helpDesc: "चिंता मत कीजिए। Farmer Trade आपको step-by-step मदद करेगा।",
     helpBtn: "मदद लें",
     langSwitch: "English"
   }
@@ -157,7 +157,8 @@ function FarmerDashboard() {
       {/* SIDEBAR */}
       <aside className="dashboard-sidebar">
         <div className="dashboard-logo">
-          🌾 Human<span>Link</span>
+          🌾 Farmer<span>Trade</span>
+          <div style={{ fontSize: '11px', color: '#88a090', marginTop: '2px', fontWeight: '500' }}>by HumanLink</div>
         </div>
 
         <nav>

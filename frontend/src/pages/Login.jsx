@@ -100,7 +100,7 @@ function Login() {
           className="auth-logo"
           onClick={() => navigate("/")}
         >
-          🌾 Human<span>Link</span>
+          🌾 Farmer<span>Trade</span>
         </button>
 
 
@@ -111,7 +111,7 @@ function Login() {
           </h1>
 
           <p>
-            Login to your HumanLink account.
+            Login to your Farmer Trade account.
           </p>
 
         </div>

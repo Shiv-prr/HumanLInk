@@ -122,7 +122,7 @@ function Register() {
           className="auth-logo"
           onClick={() => navigate("/")}
         >
-          🌾 Human<span>Link</span>
+          🌾 Farmer<span>Trade</span>
         </button>
 
 
@@ -149,7 +149,7 @@ function Register() {
         <form onSubmit={handleRegister}>
 
           <label>
-            I want to use HumanLink as
+            I want to use Farmer Trade as
           </label>
 
 
